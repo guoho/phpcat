@@ -1,0 +1,12 @@
+{
+    "name": "phpcat/phpcat",
+    "type": "library",
+    "description": "点评cat监护 php sdk",
+    "keywords": ["cat", "phpcat"],
+    "require": {
+        "php": ">=5.3.9"
+    },
+    "autoload": {
+        "psr-4": {"PhpCat\\": "src/"}
+    }
+}
