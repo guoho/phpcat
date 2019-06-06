@@ -9,23 +9,25 @@ namespace PhpCat\Config;
 
 class Config
 {
-    private static $domain;
+    public static $domain;
 
-    private static $servers;
+    public static $servers;
 
     private static $_inited = false;
 
-    //TODO Load domain from Project
+    /**
+     * 域名配置
+     * @return mixed
+     */
     public static function getDomain() {
         self::checkInit();
-        return "account";
+        return self::$domain;
     }
 
     //TODO load configurations from file
     public static function getServers() {
         self::checkInit();
-//        return self::$servers;
-        return [["10.1.3.203", 2280]];
+        return self::$servers;
     }
 
 
