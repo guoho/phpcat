@@ -99,8 +99,6 @@ class SocketConnection
                 $this->emitSocketError();
             }
         }
-        echo 'conntecte  ';
-
     }
 
 
