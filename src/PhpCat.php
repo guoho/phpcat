@@ -20,7 +20,6 @@ class PhpCat
 
     /**
      * 代码运行情况监控：运行时间统计、次数、错误次数等等
-    Transaction
      * 大小写敏感的字符串. 常见的Transaction type有 "URL", "SQL", "Email", "Exec"等
     a).transaction适合记录跨越系统边界的程序访问行为，比如远程调用，数据库调用，也适合执行时间较长的业务逻辑监控
     b).某些运行期单元要花费一定时间完成工作, 内部需要其他处理逻辑协助, 我们定义为Transaction.
@@ -28,9 +27,15 @@ class PhpCat
     d).大部分的Transaction可能会失败, 因此需要一个结果状态码.
     e).如果Transaction开始和结束之间没有其他消息产生, 那它就是Atomic Transaction(合并了起始标记).
      * 示例:
-     * $transaction = PhpCat::newTransaction("URL", "/Test");
+     * $phpcat = \Joy::$di->get('phpcat');
+     * 或
+     * $phpcat = new PhpCat("domain",[
+     *      server1,
+     *      server2,
+     * ]);
+     * $transaction = $phpcat->newTransaction("URL", "/Test");
     {
-    $t1 = PhpCat::newTransaction('Invoke', 'method1()');
+    $t1 = $phpcat->newTransaction('Invoke', 'method1()');
     sleep(2);
     $t1->setStatus(Message::SUCCESS);
     $t1->addData("Hello", "world");
@@ -38,17 +43,17 @@ class PhpCat
     }
 
     {
-    $t2 = PhpCat::newTransaction('Invoke', 'method2()');
+    $t2 = $phpcat->newTransaction('Invoke', 'method2()');
     sleep(2);
     $t2->setStatus(Message::SUCCESS);
     $t2->complete();
     }
 
     {
-    $t3 = PhpCat::newTransaction('Invoke', 'method3()');
+    $t3 = $phpcat->newTransaction('Invoke', 'method3()');
     sleep(1);
     {
-    $t4 = PhpCat::newTransaction('Invoke', 'method4()');
+    $t4 = $phpcat->newTransaction('Invoke', 'method4()');
     sleep(2);
     $t4->setStatus(Message::SUCCESS);
     $t4->complete();
@@ -62,8 +67,10 @@ class PhpCat
     $transaction->addData("Hello, world!");
     $transaction->complete();
      *
-     * @param $type
-     * @param $name
+     * 当 Transaction setStatus 为 失败时,将出现在Problem面板
+     *
+     * @param $type  类型  大小写敏感的字符串. 常见的Transaction type有 "URL", "SQL", "Email", "Exec", "Task", "Call"
+     * @param $name  具体名称, 如 某个具体URL地址, 某个具体方法名
      * @return mixed
      */
     public function newTransaction($type, $name)
@@ -73,72 +80,64 @@ class PhpCat
 
 
     /**
-     * Event用来记录次数，表名单位时间内消息发生次数，比如记录系统异常，它和transaction相比缺少了时间的统计，开销比transaction要小
-     * 常见的Event type有 "Info", "Warn", "Error", 还有"Cat"用来表示Cat内部的消息
-     * @param $type
-     * @param $name
-     * @param null $key
+     *
+     * 记录程序中一个事件记录了多少次，错误了多少次。相比于Transaction，Event没有运行时间统计。
+     * 开销比transaction要小
+     * 常见的Event type有 "Info", "Warn", "Error", "", 还有"Cat"用来表示Cat内部的消息
+     * 当类型为 Error时，且 status 失败时,错误信息出现在 监护系统Problem面板
+     *
+     * @param $type  事件类型  Info, Warn, Error, Call,  SQL, Exception 等
+     * @param $name  具体的方法, URL地址
+     * @param null $key  消息详情的key
      * @param null $value
-     * @param string $status
+     * @param string $status  成功为 0 失败则
      */
-    public function logInfo($name, $key = null, $value = null, $status = \PhpCat\Message\Message::SUCCESS)
+    public function logEvent($type, $name, $dataKey=null, $dataValue = null,  $status = \PhpCat\Message\Message::SUCCESS)
     {
-        $type = "Info";
         $event = self::newEvent($type, $name);
         $event->setStatus($status);
-        $event->addData($key, $value);
-        $event->complete();
-    }
-
-    /**
-     * Event用来记录次数，表名单位时间内消息发生次数，比如记录系统异常，它和transaction相比缺少了时间的统计，开销比transaction要小
-     * 常见的Event type有 "Info", "Warn", "Error", 还有"Cat"用来表示Cat内部的消息
-     * @param $type
-     * @param $name
-     * @param null $key
-     * @param null $value
-     * @param string $status
-     */
-    public function logWarn($name, $key = null, $value = null, $status = \PhpCat\Message\Message::SUCCESS)
-    {
-        $type = "Warn";
-        $event = self::newEvent($type, $name);
-        $event->setStatus($status);
-        $event->addData($key, $value);
+        $event->addData($dataKey, $dataValue);
         $event->complete();
     }
 
 
     /**
-     * Event用来记录次数，表名单位时间内消息发生次数，比如记录系统异常，它和transaction相比缺少了时间的统计，开销比transaction要小
-     * 常见的Event type有 "Info", "Warn", "Error", 还有"Cat"用来表示Cat内部的消息
-     * @param $type
-     * @param $name
-     * @param null $key
+     * 错误报警日志
+     *
+     * 记录程序中一个事件记录了多少次，错误了多少次。相比于Transaction，Event没有运行时间统计。
+     * 开销比transaction要小
+     * 常见的Event type有 "Info", "Warn", "Error", "", 还有"Cat"用来表示Cat内部的消息
+     *
+     * 当类型为 Error时，且 status 失败时,错误信息出现在 监护系统Problem面板
+     *
+     * @param $type  事件类型  Info, Warn, Error, Call,  SQL, Exception 等
+     * @param $name  具体的方法, URL地址
+     * @param null $key  消息详情的key
      * @param null $value
-     * @param string $status
+     * @param string $status  成功为 0 失败则
      */
-    public function logError($name, $key = null, $value = null, $status = \PhpCat\Message\Message::SUCCESS)
+    public function logError($name, $dataKey=null, $dataValue = null,  $status = \PhpCat\Message\Message::SUCCESS)
     {
-        $type = "Error";
-        $event = self::newEvent($type, $name);
+        $event = self::newEvent('Error', $name);
         $event->setStatus($status);
-        $event->addData($key, $value);
+        $event->addData($dataKey, $dataValue);
         $event->complete();
     }
 
+
+
+
     /**
-     * Exception 错误追踪
+     * 用来记录 Exception 错误追踪 类型 Event
      *
      * @param $type
      * @param $name
      * @param Exception $error
      */
-    public function logException($name, \Exception $error)
+    public function logException($type, $name, \Exception $error)
     {
-        $type = 'Error';
         $event = self::newEvent($type, $name);
-        $event->setStatus($error->getMessage());
+        $event->setStatus($error->getMessage() );
         $trace = "\n" . $error->getMessage() . "\n";
         $trace .= $error->getTraceAsString() . "\n";
         $event->addData('Trace', $trace);

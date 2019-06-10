@@ -23,17 +23,16 @@ class SingleThreadSender implements Sender
 
     function send($messageTree)
     {
-        //TODO: performance consider, should keep the connection.
-      echo  $data = $this->m_codec->encode($messageTree);
+        $data = $this->m_codec->encode($messageTree);
         $len = strlen($data);
 
         $len_bin = pack('N', $len);
         $data_bin = pack("a{$len}", $data);
 
         $_data = $len_bin . $data_bin;
-
-        list($ip,$port) = Config::getServers()[0];
-
+        $servers = Config::getServers();
+        $key = rand(0,count($servers)-1);
+        list($ip,$port) = $servers[$key];
         $socket = SocketConnection::getInstance([
             'ip' => $ip,
             'port' => $port
@@ -41,4 +40,3 @@ class SingleThreadSender implements Sender
         $socket->write($_data);
     }
 }
-
